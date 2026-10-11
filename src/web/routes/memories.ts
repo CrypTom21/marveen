@@ -1,6 +1,6 @@
 import {
   saveAgentMemory, getAgentMemories, searchAgentMemories, getMemoryStats, updateMemory,
-  hybridSearch, backfillEmbeddings,
+  hybridSearch, backfillEmbeddings, backfillNeedsWarning,
   searchMemories, getMemoriesForChat, getDb, touchMemoriesAccessed,
   getMemoryById, deleteMemoryById, getMemoryVersions,
   type Memory, type MemoryRow,
@@ -508,8 +508,14 @@ Respond ONLY with JSON, nothing else:
 
   if (path === '/api/memories/backfill' && method === 'POST') {
     try {
-      const count = await backfillEmbeddings()
-      json(res, { ok: true, count })
+      const { attempted, embedded, failed } = await backfillEmbeddings()
+      // BACKFILLZERO (card 370f34c0): pending rows with zero embedded is an
+      // embedding-backend outage, not "nothing to do". Report it as an
+      // upstream failure (502, same convention as claude-plans/connectors)
+      // so it can no longer look identical to an empty backlog. `count`
+      // stays as an alias of `embedded` for older callers.
+      const ok = !backfillNeedsWarning(attempted, embedded)
+      json(res, { ok, attempted, embedded, failed, count: embedded }, ok ? 200 : 502)
     } catch (err) {
       logger.error({ err }, 'Backfill failed')
       json(res, { error: 'Backfill failed' }, 500)

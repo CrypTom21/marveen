@@ -7432,7 +7432,9 @@ async function loadMemStats() {
       try {
         const r = await fetch('/api/memories/backfill', { method: 'POST' })
         const data = await r.json()
-        showToast(t('memories.toast.vector_count', { count: data.count }))
+        // ok:false = pending memories but the embedding backend answered none
+        if (data.ok === false) showToast(t('memories.toast.vector_error'))
+        else showToast(t('memories.toast.vector_count', { count: data.embedded ?? data.count }))
         loadMemStats()
       } catch { showToast(t('memories.toast.vector_error')) }
     })

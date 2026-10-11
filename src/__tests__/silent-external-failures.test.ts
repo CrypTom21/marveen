@@ -42,6 +42,7 @@ describe('embedding backend failures are visible once per outage', () => {
     const bfStart = src.indexOf('export async function backfillEmbeddings')
     const backfill = src.slice(bfStart, src.indexOf('\nexport ', bfStart + 1))
     expect(backfill).toContain('if (backfillNeedsWarning(rows.length, count))')
+    expect(backfill).toContain('attempted: rows.length')
     expect(backfill).toContain('logger.warn(')
   })
 })
